@@ -144,3 +144,4 @@ export const getAuditLogs = (params) =>
   api.get('/audit/logs/', { params });
 
 export default api;
+// API security fix - Diego
