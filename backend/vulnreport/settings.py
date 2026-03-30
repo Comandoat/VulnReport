@@ -268,3 +268,4 @@ LOGGING = {
         },
     },
 }
+# Settings security - Noa
