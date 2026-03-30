@@ -327,3 +327,4 @@ function KBDetailPage() {
 }
 
 export default KBDetailPage;
+// KB detail - Diego
