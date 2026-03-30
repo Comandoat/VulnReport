@@ -210,3 +210,10 @@ vulnreport/
 ## Licence
 
 Projet academique - Guardia Cybersecurity School 2025-2026.
+
+## Contributeurs
+
+- Noa B. — Chef de Projet
+- Diego D. — Responsable Frontend
+- Raphael L. — Responsable Backend
+- Antoine C. — Responsable Securite / DevOps
