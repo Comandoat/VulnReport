@@ -1,17 +1,44 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+# Ensure logs directory exists before logging config references it
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
+
+# SECRET_KEY: require env var in production, generate fallback only in DEBUG
+_secret_key = os.environ.get('DJANGO_SECRET_KEY')
+if _secret_key:
+    SECRET_KEY = _secret_key
+elif DEBUG:
+    import secrets
+    SECRET_KEY = secrets.token_urlsafe(50)
+else:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY environment variable is required when DEBUG=False."
+    )
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
     if host.strip()
 ]
+
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        "DJANGO_ALLOWED_HOSTS environment variable is required when DEBUG=False."
+    )
+
+# Database password validation
+_db_password = os.environ.get('DB_PASSWORD', '')
+if not DEBUG and not _db_password:
+    raise ImproperlyConfigured(
+        "DB_PASSWORD environment variable is required when DEBUG=False."
+    )
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -65,7 +92,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'vulnreport'),
         'USER': os.environ.get('DB_USER', 'vulnreport'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'PASSWORD': _db_password,
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
@@ -108,7 +135,18 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',
+        'user': '100/minute',
+        'login': '5/minute',
+    },
 }
 
 CORS_ALLOWED_ORIGINS = [
@@ -130,9 +168,11 @@ SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_AGE = 3600
 
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # SPA needs to read CSRF token from cookie
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = 'Strict'
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

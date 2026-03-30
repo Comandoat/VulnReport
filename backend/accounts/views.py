@@ -1,9 +1,19 @@
-from django.contrib.auth import authenticate, get_user_model, login, logout
+import logging
+
+from django.contrib.auth import (
+    authenticate,
+    get_user_model,
+    login,
+    logout,
+    update_session_auth_hash,
+)
 from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .permissions import IsAdmin
@@ -16,6 +26,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger('accounts')
 
 
 def _log_action(actor, action: str, object_type: str, object_id, metadata=None):
@@ -48,27 +59,39 @@ class LoginView(APIView):
     """Authenticate a user and start a session."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
     def post(self, request: Request) -> Response:
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        username = serializer.validated_data["username"]
+
         user = authenticate(
             request,
-            username=serializer.validated_data["username"],
+            username=username,
             password=serializer.validated_data["password"],
         )
 
         if user is None:
+            logger.warning(
+                "Failed login attempt for username: %s", username
+            )
             return Response(
                 {"detail": "Invalid credentials."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
         if not user.is_active:
+            # Return same message as invalid credentials to prevent
+            # account enumeration
+            logger.warning(
+                "Login attempt on disabled account: %s", username
+            )
             return Response(
-                {"detail": "Account is disabled."},
-                status=status.HTTP_403_FORBIDDEN,
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         login(request, user)
@@ -176,29 +199,29 @@ class UserDetailView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get_object(self, pk: int) -> User:
-        try:
-            return User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return None
+        return get_object_or_404(User, pk=pk)
 
     def get(self, request: Request, pk: int) -> Response:
         user = self.get_object(pk)
-        if user is None:
-            return Response(
-                {"detail": "User not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
         return Response(UserSerializer(user).data)
 
     def patch(self, request: Request, pk: int) -> Response:
         user = self.get_object(pk)
-        if user is None:
-            return Response(
-                {"detail": "User not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
 
-        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+        # Prevent admin from deactivating themselves
+        if user.pk == request.user.pk and 'is_active' in request.data:
+            if not request.data['is_active']:
+                return Response(
+                    {"detail": "You cannot deactivate your own account."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        serializer = UserUpdateSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            context={'request': request},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -224,7 +247,10 @@ class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
-        serializer = ChangePasswordSerializer(data=request.data)
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'request': request, 'user': request.user},
+        )
         serializer.is_valid(raise_exception=True)
 
         user = request.user
@@ -236,6 +262,8 @@ class ChangePasswordView(APIView):
 
         user.set_password(serializer.validated_data["new_password"])
         user.save()
+
+        update_session_auth_hash(request, user)
 
         _log_action(
             actor=user,

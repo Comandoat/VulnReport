@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,10 +10,11 @@ function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  if (isAuthenticated) {
-    navigate('/', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,16 +25,28 @@ function LoginPage() {
       await login(username, password);
       navigate('/', { replace: true });
     } catch (err) {
-      if (err.response && err.response.data) {
-        const data = err.response.data;
-        setError(data.detail || data.error || 'Invalid username or password.');
+      if (err.response) {
+        const status = err.response.status;
+        if (status === 429) {
+          setError('Too many login attempts. Please wait a moment and try again.');
+        } else if (status === 401 || status === 403) {
+          setError('Invalid username or password.');
+        } else if (status >= 500) {
+          setError('The server encountered an error. Please try again later.');
+        } else {
+          setError('Invalid username or password.');
+        }
       } else {
-        setError('Network error. Please try again.');
+        setError('Network error. Please check your connection and try again.');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="login-container">

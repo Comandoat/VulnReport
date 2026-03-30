@@ -20,10 +20,12 @@ function Dashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const reportsRes = await getReports();
-        const reports = reportsRes.data.results || reportsRes.data || [];
+        const [reportsRes, kbRes] = await Promise.all([
+          getReports(),
+          getKBEntries(),
+        ]);
 
-        const kbRes = await getKBEntries();
+        const reports = reportsRes.data.results || reportsRes.data || [];
         const kbEntries = kbRes.data.results || kbRes.data || [];
 
         const totalReports = reports.length;
@@ -95,7 +97,7 @@ function Dashboard() {
       <div className="page-header">
         <h1>Dashboard</h1>
         <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Welcome back, {user.username}
+          Welcome back, {user?.username}
         </span>
       </div>
 

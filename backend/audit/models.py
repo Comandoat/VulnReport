@@ -45,3 +45,13 @@ class AuditLog(models.Model):
 
     def __str__(self) -> str:
         return f"[{self.timestamp}] {self.actor} - {self.action}"
+
+    def save(self, *args, **kwargs):
+        """Only allow creation of new records. Existing records are immutable."""
+        if self.pk and AuditLog.objects.filter(pk=self.pk).exists():
+            raise ValueError("Audit log entries are immutable and cannot be updated.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of audit log entries."""
+        raise ValueError("Audit log entries cannot be deleted.")

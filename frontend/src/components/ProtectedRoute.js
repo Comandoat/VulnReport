@@ -19,13 +19,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="access-denied">
-        <h2>Access Denied</h2>
-        <p>You do not have permission to access this page.</p>
-        <p>Required role: {allowedRoles.join(' or ')}</p>
-      </div>
-    );
+    return <Navigate to="/" replace />;
   }
 
   return children;

@@ -5,12 +5,16 @@ services:
     image: postgres:16-alpine
     container_name: vulnreport-db
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run/postgresql
     env_file:
       - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-vulnreport}
       POSTGRES_USER: ${POSTGRES_USER:-vulnreport}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vulnreport_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,6 +32,9 @@ services:
       dockerfile: Dockerfile
     container_name: vulnreport-backend
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
       db:
         condition: service_healthy
@@ -36,8 +43,8 @@ services:
     environment:
       DATABASE_HOST: db
       DATABASE_PORT: 5432
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     command: >
       bash -c "python manage.py migrate --noinput &&
                python manage.py seed_data &&
@@ -51,10 +58,15 @@ services:
       dockerfile: Dockerfile
     container_name: vulnreport-frontend
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
     depends_on:
       - backend
-    ports:
-      - "3000:80"
+    expose:
+      - "80"
     networks:
       - vulnreport-net
 
@@ -62,6 +74,11 @@ services:
     image: nginx:alpine
     container_name: vulnreport-nginx
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
     depends_on:
       - backend
       - frontend

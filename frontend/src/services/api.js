@@ -7,6 +7,14 @@ function getCookie(name) {
   return null;
 }
 
+function validateId(id) {
+  const parsed = Number(id);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error('Invalid ID parameter.');
+  }
+  return parsed;
+}
+
 const api = axios.create({
   baseURL: '/api',
   withCredentials: true,
@@ -26,11 +34,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+    if (error.response) {
+      const status = error.response.status;
       const currentPath = window.location.pathname;
-      if (currentPath !== '/login') {
+
+      if (status === 401 && currentPath !== '/login') {
+        // Session expired — redirect to login
         window.location.href = '/login';
       }
+      // 403 is a permission error — do NOT redirect, let the caller handle it
     }
     return Promise.reject(error);
   }
@@ -48,8 +60,10 @@ export const getMe = () =>
 export const getUsers = () =>
   api.get('/users/');
 
-export const updateUser = (id, data) =>
-  api.patch(`/users/${id}/`, data);
+export const updateUser = (id, data) => {
+  const safeId = validateId(id);
+  return api.patch(`/users/${safeId}/`, data);
+};
 
 export const createUser = (data) =>
   api.post('/users/', data);
@@ -60,44 +74,68 @@ export const getReports = (params) =>
 export const createReport = (data) =>
   api.post('/reports/', data);
 
-export const getReport = (id) =>
-  api.get(`/reports/${id}/`);
+export const getReport = (id) => {
+  const safeId = validateId(id);
+  return api.get(`/reports/${safeId}/`);
+};
 
-export const updateReport = (id, data) =>
-  api.patch(`/reports/${id}/`, data);
+export const updateReport = (id, data) => {
+  const safeId = validateId(id);
+  return api.patch(`/reports/${safeId}/`, data);
+};
 
-export const deleteReport = (id) =>
-  api.delete(`/reports/${id}/`);
+export const deleteReport = (id) => {
+  const safeId = validateId(id);
+  return api.delete(`/reports/${safeId}/`);
+};
 
-export const getFindings = (reportId) =>
-  api.get(`/reports/${reportId}/findings/`);
+export const getFindings = (reportId) => {
+  const safeReportId = validateId(reportId);
+  return api.get(`/reports/${safeReportId}/findings/`);
+};
 
-export const createFinding = (reportId, data) =>
-  api.post(`/reports/${reportId}/findings/`, data);
+export const createFinding = (reportId, data) => {
+  const safeReportId = validateId(reportId);
+  return api.post(`/reports/${safeReportId}/findings/`, data);
+};
 
-export const updateFinding = (reportId, findingId, data) =>
-  api.patch(`/reports/${reportId}/findings/${findingId}/`, data);
+export const updateFinding = (reportId, findingId, data) => {
+  const safeReportId = validateId(reportId);
+  const safeFindingId = validateId(findingId);
+  return api.patch(`/reports/${safeReportId}/findings/${safeFindingId}/`, data);
+};
 
-export const deleteFinding = (reportId, findingId) =>
-  api.delete(`/reports/${reportId}/findings/${findingId}/`);
+export const deleteFinding = (reportId, findingId) => {
+  const safeReportId = validateId(reportId);
+  const safeFindingId = validateId(findingId);
+  return api.delete(`/reports/${safeReportId}/findings/${safeFindingId}/`);
+};
 
-export const reorderFindings = (reportId, data) =>
-  api.post(`/reports/${reportId}/findings/reorder/`, data);
+export const reorderFindings = (reportId, data) => {
+  const safeReportId = validateId(reportId);
+  return api.post(`/reports/${safeReportId}/findings/reorder/`, data);
+};
 
 export const getKBEntries = (params) =>
   api.get('/kb/', { params });
 
-export const getKBEntry = (id) =>
-  api.get(`/kb/${id}/`);
+export const getKBEntry = (id) => {
+  const safeId = validateId(id);
+  return api.get(`/kb/${safeId}/`);
+};
 
 export const createKBEntry = (data) =>
   api.post('/kb/', data);
 
-export const updateKBEntry = (id, data) =>
-  api.patch(`/kb/${id}/`, data);
+export const updateKBEntry = (id, data) => {
+  const safeId = validateId(id);
+  return api.patch(`/kb/${safeId}/`, data);
+};
 
-export const deleteKBEntry = (id) =>
-  api.delete(`/kb/${id}/`);
+export const deleteKBEntry = (id) => {
+  const safeId = validateId(id);
+  return api.delete(`/kb/${safeId}/`);
+};
 
 export const getResources = (params) =>
   api.get('/resources/', { params });

@@ -108,6 +108,16 @@ class ResourceListView(ListCreateAPIView):
             return [IsAdmin()]
         return [IsAuthenticated()]
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        log_action(
+            actor=self.request.user,
+            action="create_resource",
+            object_type="resource",
+            object_id=instance.pk,
+            metadata={"title": instance.title},
+        )
+
 
 class ResourceDetailView(RetrieveUpdateDestroyAPIView):
     """
@@ -123,3 +133,25 @@ class ResourceDetailView(RetrieveUpdateDestroyAPIView):
         if self.request.method in ("PATCH", "PUT", "DELETE"):
             return [IsAdmin()]
         return [IsAuthenticated()]
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        log_action(
+            actor=self.request.user,
+            action="update_resource",
+            object_type="resource",
+            object_id=instance.pk,
+            metadata={"title": instance.title},
+        )
+
+    def perform_destroy(self, instance):
+        resource_id = instance.pk
+        resource_title = instance.title
+        instance.delete()
+        log_action(
+            actor=self.request.user,
+            action="delete_resource",
+            object_type="resource",
+            object_id=resource_id,
+            metadata={"title": resource_title},
+        )

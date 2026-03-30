@@ -9,7 +9,7 @@ class IsAdmin(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role == "admin"
+            and getattr(request.user, 'role', None) == "admin"
         )
 
 
@@ -20,7 +20,7 @@ class IsPentester(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role == "pentester"
+            and getattr(request.user, 'role', None) == "pentester"
         )
 
 
@@ -31,7 +31,7 @@ class IsPentesterOrAdmin(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role in ("pentester", "admin")
+            and getattr(request.user, 'role', None) in ("pentester", "admin")
         )
 
 
@@ -42,7 +42,7 @@ class IsViewer(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
-            and request.user.role == "viewer"
+            and getattr(request.user, 'role', None) == "viewer"
         )
 
 
@@ -52,7 +52,13 @@ class IsOwnerOrAdmin(BasePermission):
     (via an ``owner`` attribute) or is an admin.
     """
 
+    def has_permission(self, request: Request, view) -> bool:
+        return request.user and request.user.is_authenticated
+
     def has_object_permission(self, request: Request, view, obj) -> bool:
         if not request.user or not request.user.is_authenticated:
             return False
-        return obj.owner == request.user or request.user.is_admin
+        return (
+            obj.owner == request.user
+            or getattr(request.user, 'role', None) == "admin"
+        )

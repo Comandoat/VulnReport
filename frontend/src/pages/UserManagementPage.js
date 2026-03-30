@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { getUsers, updateUser, createUser } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+const MIN_PASSWORD_LENGTH = 12;
 
 function UserManagementPage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [createForm, setCreateForm] = useState({
     username: '',
     email: '',
@@ -29,7 +34,10 @@ function UserManagementPage() {
     }
   };
 
+  const isSelf = (userId) => currentUser && currentUser.id === userId;
+
   const handleRoleChange = async (userId, newRole) => {
+    if (isSelf(userId)) return;
     setError('');
     setSuccess('');
     try {
@@ -44,6 +52,7 @@ function UserManagementPage() {
   };
 
   const handleToggleActive = async (userId, currentActive) => {
+    if (isSelf(userId)) return;
     setError('');
     setSuccess('');
     try {
@@ -57,15 +66,31 @@ function UserManagementPage() {
     }
   };
 
+  const handlePasswordChange = (value) => {
+    setCreateForm({ ...createForm, password: value });
+    if (value.length > 0 && value.length < MIN_PASSWORD_LENGTH) {
+      setPasswordError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+    } else {
+      setPasswordError('');
+    }
+  };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (createForm.password.length < MIN_PASSWORD_LENGTH) {
+      setPasswordError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
     try {
       const res = await createUser(createForm);
       setUsers((prev) => [...prev, res.data]);
       setShowCreateForm(false);
       setCreateForm({ username: '', email: '', password: '', role: 'viewer' });
+      setPasswordError('');
       setSuccess('User created successfully.');
     } catch (err) {
       if (err.response && err.response.data) {
@@ -127,10 +152,16 @@ function UserManagementPage() {
                 type="password"
                 className="form-control"
                 value={createForm.password}
-                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                onChange={(e) => handlePasswordChange(e.target.value)}
                 required
+                minLength={MIN_PASSWORD_LENGTH}
                 autoComplete="new-password"
               />
+              {passwordError && (
+                <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  {passwordError}
+                </p>
+              )}
             </div>
             <div className="form-group">
               <label>Role</label>
@@ -164,13 +195,17 @@ function UserManagementPage() {
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td style={{ fontWeight: 500 }}>{u.username}</td>
+                <td style={{ fontWeight: 500 }}>
+                  {u.username}
+                  {isSelf(u.id) && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}> (you)</span>}
+                </td>
                 <td>{u.email || '-'}</td>
                 <td>
                   <select
                     className="form-control"
                     value={u.role}
                     onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                    disabled={isSelf(u.id)}
                     style={{ width: 'auto', padding: '0.3rem 0.5rem', fontSize: '0.8rem' }}
                   >
                     <option value="viewer">Viewer</option>
@@ -190,6 +225,8 @@ function UserManagementPage() {
                   <button
                     className={`btn btn-small ${u.is_active ? 'btn-danger' : 'btn-primary'}`}
                     onClick={() => handleToggleActive(u.id, u.is_active)}
+                    disabled={isSelf(u.id)}
+                    title={isSelf(u.id) ? 'You cannot modify your own account' : ''}
                   >
                     {u.is_active ? 'Deactivate' : 'Activate'}
                   </button>
