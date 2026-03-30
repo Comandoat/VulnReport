@@ -52,7 +52,7 @@ function LoginPage() {
     <div className="login-container">
       <div className="login-box">
         <h1>VulnReport</h1>
-        <p className="subtitle">Pentest Report Generator</p>
+        <p className="subtitle">Generateur de Rapports de Pentest</p>
 
         {error && <div className="error-message">{error}</div>}
 
