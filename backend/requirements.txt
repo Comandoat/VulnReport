@@ -22,3 +22,4 @@ reportlab==4.2.5
 
 # Environment variables
 python-dotenv==1.0.1
+# Requirements pinned - Noa
