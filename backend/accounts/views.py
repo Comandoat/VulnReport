@@ -276,3 +276,4 @@ class ChangePasswordView(APIView):
             {"detail": "Password updated successfully."},
             status=status.HTTP_200_OK,
         )
+# Audit fix - Antoine
