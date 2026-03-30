@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: vulnreport-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vulnreport}
+      POSTGRES_USER: ${POSTGRES_USER:-vulnreport}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vulnreport_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vulnreport} -d ${POSTGRES_DB:-vulnreport}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - vulnreport-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vulnreport-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "python manage.py migrate --noinput &&
+               python manage.py seed_data &&
+               gunicorn vulnreport.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    networks:
+      - vulnreport-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vulnreport-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - vulnreport-net
+
+  nginx:
+    image: nginx:alpine
+    container_name: vulnreport-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - vulnreport-net
+
+networks:
+  vulnreport-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
