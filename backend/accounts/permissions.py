@@ -62,3 +62,4 @@ class IsOwnerOrAdmin(BasePermission):
             obj.owner == request.user
             or getattr(request.user, 'role', None) == "admin"
         )
+# Permissions fix - Antoine

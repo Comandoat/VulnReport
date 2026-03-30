@@ -94,3 +94,4 @@ function LoginPage() {
 }
 
 export default LoginPage;
+// Login security - Diego
