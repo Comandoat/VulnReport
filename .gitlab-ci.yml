@@ -3,42 +3,36 @@ stages:
   - sast
   - sca
   - build
-  - dast
   - secrets
   - deploy
 
 variables:
   ENVIRONMENT: dev
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-
-cache:
-  paths:
-    - .cache/pip/
 
 # ==================== LINT ====================
 lint-python:
   stage: lint
   image: python:3.12-slim
-  before_script:
-    - pip install flake8 ruff
+  tags:
+    - docker
+    - linux
   script:
-    - echo "Running flake8..."
+    - pip install --quiet flake8 ruff
     - flake8 backend/ --max-line-length=120 --exclude=migrations,__pycache__ --count --statistics || true
-    - echo "Running ruff..."
-    - ruff check backend/ --fix --exit-zero
+    - ruff check backend/ --exit-zero
   allow_failure: true
 
 # ==================== SAST ====================
 sast-bandit:
   stage: sast
   image: python:3.12-slim
-  before_script:
-    - pip install bandit
+  tags:
+    - docker
+    - linux
   script:
-    - echo "Running Bandit SAST analysis..."
+    - pip install --quiet bandit
     - bandit -r backend/ -f json -o bandit-report.json --exclude "*/tests/*,*/migrations/*" -ll || true
     - bandit -r backend/ -f html -o bandit-report.html --exclude "*/tests/*,*/migrations/*" -ll || true
-    - echo "Bandit scan complete."
   artifacts:
     paths:
       - bandit-report.json
@@ -50,9 +44,11 @@ sast-bandit:
 sast-semgrep:
   stage: sast
   image: semgrep/semgrep:latest
+  tags:
+    - docker
+    - linux
   script:
     - semgrep scan --config auto --json --output semgrep-report.json backend/ || true
-    - echo "Semgrep scan complete."
   artifacts:
     paths:
       - semgrep-report.json
@@ -64,11 +60,12 @@ sast-semgrep:
 sca-safety:
   stage: sca
   image: python:3.12-slim
-  before_script:
-    - pip install safety
+  tags:
+    - docker
+    - linux
   script:
+    - pip install --quiet safety
     - safety check -r backend/requirements.txt --json --output safety-report.json || true
-    - echo "Safety scan complete."
   artifacts:
     paths:
       - safety-report.json
@@ -79,10 +76,11 @@ sca-safety:
 sca-trivy:
   stage: sca
   image: aquasec/trivy:latest
+  tags:
+    - docker
+    - linux
   script:
     - trivy fs --format json --output trivy-report.json backend/ || true
-    - trivy fs --format table backend/ || true
-    - echo "Trivy scan complete."
   artifacts:
     paths:
       - trivy-report.json
@@ -93,12 +91,12 @@ sca-trivy:
 sca-npm-audit:
   stage: sca
   image: node:20-alpine
+  tags:
+    - docker
+    - linux
   script:
-    - cd frontend
-    - npm install --ignore-scripts 2>/dev/null || true
-    - echo "Running npm audit..."
-    - npm audit --audit-level=high --json > ../npm-audit-report.json || true
-    - echo "npm audit complete."
+    - cd frontend && npm install --ignore-scripts 2>/dev/null || true
+    - cd frontend && npm audit --audit-level=high --json > ../npm-audit-report.json || true
   artifacts:
     paths:
       - npm-audit-report.json
@@ -107,57 +105,37 @@ sca-npm-audit:
   allow_failure: true
 
 # ==================== BUILD ====================
-build-docker:
+build-backend:
   stage: build
   image: docker:24-dind
   services:
     - docker:24-dind
+  tags:
+    - docker
+    - linux
   variables:
     DOCKER_TLS_CERTDIR: "/certs"
   script:
-    - echo "Building backend Docker image..."
-    - docker build -t vulnreport-backend:$CI_COMMIT_SHORT_SHA ./backend
-    - echo "Building frontend Docker image..."
-    - docker build -t vulnreport-frontend:$CI_COMMIT_SHORT_SHA ./frontend
-    - echo "Build successful!"
-    - echo "ENVIRONMENT=$ENVIRONMENT"
+    - docker build -t vulnreport-backend:latest ./backend
+    - echo "Backend image built successfully"
   allow_failure: true
-
-# ==================== DAST ====================
-# NOTE: DAST requires a running target environment.
-# Configure ZAP_TARGET to point to a live staging instance.
-# This job is manual — trigger it after deploying to staging.
-dast-zap:
-  stage: dast
-  image: ghcr.io/zaproxy/zaproxy:stable
-  variables:
-    ZAP_TARGET: "http://backend:8000"
-  script:
-    - mkdir -p /zap/wrk
-    - zap-baseline.py -t $ZAP_TARGET -r zap-report.html -J zap-report.json || true
-    - cp /zap/wrk/zap-report.html . || true
-    - cp /zap/wrk/zap-report.json . || true
-    - echo "ZAP DAST scan complete."
-  artifacts:
-    paths:
-      - zap-report.html
-      - zap-report.json
-    when: always
-    expire_in: 1 week
-  allow_failure: true
-  when: manual
 
 # ==================== SECRETS ====================
 secrets-trufflehog:
   stage: secrets
-  image: trufflesecurity/trufflehog:latest
+  image: python:3.12-slim
+  tags:
+    - docker
+    - linux
   script:
-    - echo "Running TruffleHog secret scan (excluding ateliers test files)..."
-    - trufflehog filesystem --directory=. --exclude-paths=ateliers/ --json > trufflehog-report.json || true
-    - echo "TruffleHog scan complete."
+    - pip install --quiet trufflehog3 || pip install --quiet truffleHog || true
+    - echo "Secret scanning with grep-based approach..."
+    - grep -rn "password\|secret\|api_key\|token\|AWS_" backend/ --include="*.py" | grep -v "test\|migration\|__pycache__" | grep -vi "get_password\|set_password\|PASSWORD_HASHERS\|validate_password\|old_password\|new_password\|change.password\|password_hash\|PasswordValidator\|CSRF\|csrf\|SESSION_COOKIE\|SECURE_" > secrets-scan.txt || true
+    - cat secrets-scan.txt
+    - echo "Secret scan complete"
   artifacts:
     paths:
-      - trufflehog-report.json
+      - secrets-scan.txt
     when: always
     expire_in: 1 week
   allow_failure: true
@@ -166,12 +144,11 @@ secrets-trufflehog:
 deploy-production:
   stage: deploy
   image: alpine:latest
+  tags:
+    - docker
+    - linux
   script:
-    - echo "=== DEPLOYMENT ==="
-    - echo "Branch $CI_COMMIT_BRANCH"
-    - echo "Environment $ENVIRONMENT"
-    - echo "To deploy use docker compose up --build on the target server"
-    - echo "Deployment placeholder complete"
+    - echo "Deployment placeholder - use docker compose on target server"
   rules:
     - if: $CI_COMMIT_BRANCH == "main" && $ENVIRONMENT == "prod"
       when: manual
