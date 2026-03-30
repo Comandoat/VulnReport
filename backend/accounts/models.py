@@ -18,6 +18,7 @@ class User(AbstractUser):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Database model
     class Meta:
         ordering = ["-date_joined"]
 
