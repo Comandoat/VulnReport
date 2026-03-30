@@ -55,3 +55,4 @@ class AuditLog(models.Model):
     def delete(self, *args, **kwargs):
         """Prevent deletion of audit log entries."""
         raise ValueError("Audit log entries cannot be deleted.")
+# Audit immutability - Noa
