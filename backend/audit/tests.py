@@ -210,3 +210,4 @@ class AuditLogIntegrationTest(TestCase):
         log = AuditLog.objects.filter(action="register_user").first()
         self.assertIsNotNone(log)
         self.assertEqual(log.metadata["username"], "newuser")
+# Tests audit - Diego

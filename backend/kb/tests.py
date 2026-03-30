@@ -272,3 +272,4 @@ class ResourceAccessTest(TestCase):
             reverse("kb:resource-detail", args=[self.resource.pk])
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+# Tests KB - Diego
