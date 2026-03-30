@@ -154,7 +154,7 @@ function AdminDashboard({ stats }) {
               {stats.recentActivity.map((log, i) => (
                 <tr key={i}>
                   <td>{new Date(log.timestamp || log.created_at).toLocaleString()}</td>
-                  <td>{log.actor || log.user || '-'}</td>
+                  <td>{log.actor?.username || log.actor || '-'}</td>
                   <td>{log.action}</td>
                   <td>{log.object_type} #{log.object_id}</td>
                 </tr>
