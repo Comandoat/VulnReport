@@ -44,7 +44,8 @@ function ReportDetailPage() {
     executive_summary: '',
   });
 
-  const isOwner = report && user && (report.owner === user.id || report.owner === user.username);
+  const ownerId = report?.owner?.id ?? report?.owner;
+  const isOwner = report && user && (ownerId === user.id);
   const canEdit = isOwner || isAdmin;
 
   const fetchData = useCallback(async () => {
@@ -280,7 +281,7 @@ function ReportDetailPage() {
             <span>
               Status: <span className={`status-badge status-${report.status}`}>{report.status.replace('_', ' ')}</span>
             </span>
-            <span>Owner: {report.owner_username || report.owner}</span>
+            <span>Owner: {report.owner?.username || report.owner_username || 'Unknown'}</span>
             <span>Created: {new Date(report.created_at).toLocaleDateString()}</span>
             <span>Updated: {new Date(report.updated_at || report.created_at).toLocaleDateString()}</span>
           </div>
