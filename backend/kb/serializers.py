@@ -1,3 +1,4 @@
+# KB Serializers - Noa
 from rest_framework import serializers
 
 from .models import KBEntry, Resource
