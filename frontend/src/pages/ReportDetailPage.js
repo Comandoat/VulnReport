@@ -13,6 +13,48 @@ import {
   getKBEntries,
 } from '../services/api';
 
+const VALID_TRANSITIONS = {
+  draft: ['in_progress'],
+  in_progress: ['finalized'],
+  finalized: ['published'],
+  published: [],
+};
+
+const STATUS_LABELS = {
+  draft: 'Draft',
+  in_progress: 'In Progress',
+  finalized: 'Finalized',
+  published: 'Published',
+};
+
+function StatusDropdown({ currentStatus, onChange, isAdmin }) {
+  const nextStatuses = VALID_TRANSITIONS[currentStatus] || [];
+  // Admin can also publish from finalized
+  const options = isAdmin ? nextStatuses : nextStatuses.filter(s => s !== 'published');
+
+  if (options.length === 0) {
+    return (
+      <span className={`status-badge status-${currentStatus}`}>
+        {STATUS_LABELS[currentStatus] || currentStatus}
+      </span>
+    );
+  }
+
+  return (
+    <select
+      className="form-control"
+      value={currentStatus}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ width: 'auto' }}
+    >
+      <option value={currentStatus}>{STATUS_LABELS[currentStatus]}</option>
+      {options.map(s => (
+        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+      ))}
+    </select>
+  );
+}
+
 function ReportDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -259,17 +301,11 @@ function ReportDetailPage() {
             <div className="detail-actions">
               {canEdit && (
                 <>
-                  <select
-                    className="form-control"
-                    value={report.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    style={{ width: 'auto' }}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="finalized">Finalized</option>
-                    <option value="published">Published</option>
-                  </select>
+                  <StatusDropdown
+                    currentStatus={report.status}
+                    onChange={handleStatusChange}
+                    isAdmin={isAdmin}
+                  />
                   <button className="btn btn-secondary" onClick={() => setIsEditing(true)}>Edit</button>
                   <button className="btn btn-danger" onClick={handleDeleteReport}>Delete</button>
                 </>
