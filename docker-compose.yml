@@ -32,7 +32,6 @@ services:
       dockerfile: Dockerfile
     container_name: vulnreport-backend
     restart: unless-stopped
-    read_only: true
     tmpfs:
       - /tmp
     depends_on:
