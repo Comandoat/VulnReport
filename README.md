@@ -210,3 +210,15 @@ vulnreport/
 ## Licence
 
 Projet academique - Guardia Cybersecurity School 2025-2026.
+
+## Contributeurs
+
+- Noa B. — Chef de Projet
+- Diego D. — Responsable Frontend
+- Raphael L. — Responsable Backend
+- Antoine C. — Responsable Securite / DevOps
+
+## Gestion de Projet
+
+Le projet est gere via le board GitLab avec 3 sprints et 25 issues.
+Voir docs/usage-gitlab.md pour le detail de l'utilisation de GitLab.
