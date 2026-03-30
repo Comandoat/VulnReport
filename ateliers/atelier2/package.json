@@ -1,0 +1,10 @@
+{
+  "name": "test-vuln",
+  "version": "1.0.0",
+  "description": "Projet de test avec des dependances volontairement vulnerables pour l'analyse SCA",
+  "dependencies": {
+    "lodash": "3.0.0",
+    "jquery": "3.2.1",
+    "minimist": "0.0.8"
+  }
+}

@@ -51,6 +51,6 @@ config.conf
 *.key
 secrets/
 
-# CI/CD artifacts
-reports/
+# CI/CD artifacts (scan reports, not the Django reports app)
+scan-reports/
 *.sarif

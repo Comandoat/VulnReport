@@ -1,0 +1,108 @@
+stages:
+  - build
+  - test
+  - integration
+  - deploy
+
+variables:
+  ENVIRONMENT: dev
+
+# =============================================================================
+# Exercice 1 - Stage build
+# =============================================================================
+build-job:
+  stage: build
+  image: alpine:latest
+  script:
+    - echo "Building the project..."
+    - echo "ENVIRONMENT=$ENVIRONMENT"
+
+# =============================================================================
+# Exercice 1 - Stage test
+# =============================================================================
+test-job:
+  stage: test
+  image: alpine:latest
+  script:
+    - echo "Running tests..."
+
+# =============================================================================
+# Exercices 2, 3, 4 - Job d'integration avec artefact, erreur forcee et
+# allow_failure
+# =============================================================================
+integration-job:
+  stage: integration
+  image: alpine:latest
+  script:
+    - echo "This is an output" > output.txt
+    - echo "Integration testing..."
+    - exit 1  # Exercice 3 : erreur forcee
+  artifacts:
+    paths:
+      - output.txt
+    when: always          # Exercice 3 : sauvegarde l'artefact meme en cas d'echec
+    expire_in: 1 week
+  allow_failure: true     # Exercice 4 : le pipeline continue malgre l'echec
+
+# =============================================================================
+# Exercice 6 - Detection de secrets avec TruffleHog
+# =============================================================================
+git-secrets:
+  stage: test
+  image: trufflesecurity/trufflehog:latest
+  script:
+    - trufflehog filesystem --directory=. --json > trufflehog-report.json
+  artifacts:
+    paths:
+      - trufflehog-report.json
+    when: always
+    expire_in: 1 week
+  allow_failure: true
+
+# =============================================================================
+# Defi 1 - SCA avec OWASP Dependency-Check
+# =============================================================================
+oast-dependency-check:
+  stage: test
+  image: owasp/dependency-check:latest
+  script:
+    - /usr/share/dependency-check/bin/dependency-check.sh --project "test-vuln" --scan . --format HTML --format JSON --out dependency-check-report
+  artifacts:
+    paths:
+      - dependency-check-report/
+    when: always
+    expire_in: 1 week
+  allow_failure: true
+
+# =============================================================================
+# Defi 2 - SCA avec Snyk
+# =============================================================================
+oast-snyk:
+  stage: build
+  image: node:18-alpine
+  before_script:
+    - wget -O /usr/local/bin/snyk https://static.snyk.io/cli/latest/snyk-linux
+    - chmod +x /usr/local/bin/snyk
+  script:
+    - npm install
+    - snyk auth $SNYK_TOKEN
+    - snyk test --json > snyk-results.json
+    - cat snyk-results.json
+  artifacts:
+    paths:
+      - snyk-results.json
+    when: always
+    expire_in: 1 week
+  allow_failure: true
+
+# =============================================================================
+# Exercices 5, 7 - Deploiement manuel + regles conditionnelles
+# =============================================================================
+deploy-job:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Deploying to production..."
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $ENVIRONMENT == "prod"'
+      when: manual
