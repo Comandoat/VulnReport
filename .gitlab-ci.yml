@@ -128,3 +128,4 @@ deploy-production:
     - when: never
   environment:
     name: production
+# Pipeline CI - Antoine
