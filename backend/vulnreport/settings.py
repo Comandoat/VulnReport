@@ -165,12 +165,12 @@ CSRF_TRUSTED_ORIGINS = [
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_SAMESITE = 'Lax'  # Lax for SPA compatibility (Strict blocks cookies after cross-origin redirects)
 SESSION_COOKIE_AGE = 3600
 
 CSRF_COOKIE_HTTPONLY = False  # SPA needs to read CSRF token from cookie
 CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_SAMESITE = 'Lax'  # Lax for SPA compatibility
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
