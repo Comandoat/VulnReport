@@ -235,3 +235,4 @@ class ReportUpdateSerializer(serializers.ModelSerializer):
                     {"status": "Only admins can publish reports."}
                 )
         return attrs
+# Serializer fix - Noa
