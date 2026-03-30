@@ -168,12 +168,13 @@ deploy-production:
   image: alpine:latest
   script:
     - echo "=== DEPLOYMENT ==="
-    - echo "Branch: $CI_COMMIT_BRANCH"
-    - echo "Environment: $ENVIRONMENT"
-    - echo "To deploy, use docker compose up --build on the target server"
-    - echo "Deployment placeholder complete."
+    - echo "Branch $CI_COMMIT_BRANCH"
+    - echo "Environment $ENVIRONMENT"
+    - echo "To deploy use docker compose up --build on the target server"
+    - echo "Deployment placeholder complete"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" && $ENVIRONMENT == "prod"'
+    - if: $CI_COMMIT_BRANCH == "main" && $ENVIRONMENT == "prod"
       when: manual
+    - when: never
   environment:
     name: production
