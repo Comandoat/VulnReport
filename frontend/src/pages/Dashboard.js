@@ -97,7 +97,7 @@ function Dashboard() {
       <div className="page-header">
         <h1>Dashboard</h1>
         <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Welcome back, {user?.username}
+          Bienvenue, {user?.username}
         </span>
       </div>
 
