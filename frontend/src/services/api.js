@@ -58,15 +58,15 @@ export const getMe = () =>
   api.get('/auth/me/');
 
 export const getUsers = () =>
-  api.get('/users/');
+  api.get('/auth/users/');
 
 export const updateUser = (id, data) => {
   const safeId = validateId(id);
-  return api.patch(`/users/${safeId}/`, data);
+  return api.patch(`/auth/users/${safeId}/`, data);
 };
 
 export const createUser = (data) =>
-  api.post('/users/', data);
+  api.post('/auth/register/', data);
 
 export const getReports = (params) =>
   api.get('/reports/', { params });
@@ -117,30 +117,30 @@ export const reorderFindings = (reportId, data) => {
 };
 
 export const getKBEntries = (params) =>
-  api.get('/kb/', { params });
+  api.get('/kb/entries/', { params });
 
 export const getKBEntry = (id) => {
   const safeId = validateId(id);
-  return api.get(`/kb/${safeId}/`);
+  return api.get(`/kb/entries/${safeId}/`);
 };
 
 export const createKBEntry = (data) =>
-  api.post('/kb/', data);
+  api.post('/kb/entries/', data);
 
 export const updateKBEntry = (id, data) => {
   const safeId = validateId(id);
-  return api.patch(`/kb/${safeId}/`, data);
+  return api.patch(`/kb/entries/${safeId}/`, data);
 };
 
 export const deleteKBEntry = (id) => {
   const safeId = validateId(id);
-  return api.delete(`/kb/${safeId}/`);
+  return api.delete(`/kb/entries/${safeId}/`);
 };
 
 export const getResources = (params) =>
-  api.get('/resources/', { params });
+  api.get('/kb/resources/', { params });
 
 export const getAuditLogs = (params) =>
-  api.get('/audit/', { params });
+  api.get('/audit/logs/', { params });
 
 export default api;
