@@ -474,7 +474,7 @@ function ReportDetailPage() {
       {showFindingForm && (
         <div className="modal-overlay" onClick={() => setShowFindingForm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{editingFinding ? 'Edit Finding' : 'New Finding'}</h2>
+            <h2>{editingFinding ? 'Edit Finding' : 'Nouveau Finding'}</h2>
             <div className="form-group">
               <label>Title *</label>
               <input
