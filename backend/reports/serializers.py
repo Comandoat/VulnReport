@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Finding, Report
+from kb.models import KBEntry
 
 
 VALID_STATUS_TRANSITIONS = {
@@ -31,7 +32,7 @@ class FindingSerializer(serializers.ModelSerializer):
     """Full representation of a finding."""
 
     kb_entry = serializers.PrimaryKeyRelatedField(
-        queryset=None,
+        queryset=KBEntry.objects.all(),
         required=False,
         allow_null=True,
     )
@@ -75,7 +76,7 @@ class FindingCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a finding, with optional KBEntry pre-fill."""
 
     kb_entry = serializers.PrimaryKeyRelatedField(
-        queryset=None,
+        queryset=KBEntry.objects.all(),
         required=False,
         allow_null=True,
     )
@@ -174,7 +175,8 @@ class ReportCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Report
-        fields = ["title", "context", "executive_summary"]
+        fields = ["id", "title", "context", "executive_summary", "status", "created_at"]
+        read_only_fields = ["id", "status", "created_at"]
 
     def create(self, validated_data):
         validated_data.setdefault("status", "draft")
