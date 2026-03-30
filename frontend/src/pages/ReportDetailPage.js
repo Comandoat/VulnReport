@@ -28,11 +28,26 @@ const STATUS_LABELS = {
 };
 
 function StatusDropdown({ currentStatus, onChange, isAdmin }) {
-  const nextStatuses = VALID_TRANSITIONS[currentStatus] || [];
-  // Admin can also publish from finalized
-  const options = isAdmin ? nextStatuses : nextStatuses.filter(s => s !== 'published');
+  // Admin can set any status (including retrograde)
+  if (isAdmin) {
+    return (
+      <select
+        className="form-control"
+        value={currentStatus}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: 'auto' }}
+      >
+        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
+      </select>
+    );
+  }
 
-  if (options.length === 0) {
+  // Non-admin: only forward transitions
+  const nextStatuses = (VALID_TRANSITIONS[currentStatus] || []).filter(s => s !== 'published');
+
+  if (nextStatuses.length === 0) {
     return (
       <span className={`status-badge status-${currentStatus}`}>
         {STATUS_LABELS[currentStatus] || currentStatus}
@@ -48,7 +63,7 @@ function StatusDropdown({ currentStatus, onChange, isAdmin }) {
       style={{ width: 'auto' }}
     >
       <option value={currentStatus}>{STATUS_LABELS[currentStatus]}</option>
-      {options.map(s => (
+      {nextStatuses.map(s => (
         <option key={s} value={s}>{STATUS_LABELS[s]}</option>
       ))}
     </select>

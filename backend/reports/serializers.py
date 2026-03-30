@@ -197,9 +197,16 @@ class ReportUpdateSerializer(serializers.ModelSerializer):
         }
 
     def validate_status(self, value):
-        """Validate status transitions: draft->in_progress->finalized->published."""
+        """Validate status transitions. Admins can set any status."""
         instance = self.instance
         if instance is None:
+            return value
+
+        request = self.context.get("request")
+        user_role = getattr(request.user, "role", None) if request else None
+
+        # Admins bypass transition validation — they can set any status
+        if user_role == "admin":
             return value
 
         current_status = instance.status
