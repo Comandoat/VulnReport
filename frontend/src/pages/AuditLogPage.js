@@ -161,3 +161,4 @@ function getActionColor(action) {
 }
 
 export default AuditLogPage;
+// Audit actor display fix - Diego
