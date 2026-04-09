@@ -269,3 +269,4 @@ LOGGING = {
     },
 }
 # Settings security - Noa
+# Final validation - Antoine
