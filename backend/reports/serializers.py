@@ -84,6 +84,7 @@ class FindingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Finding
         fields = [
+            "id",
             "title",
             "description",
             "proof",
@@ -188,7 +189,8 @@ class ReportUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Report
-        fields = ["title", "context", "executive_summary", "status"]
+        fields = ["id", "title", "context", "executive_summary", "status"]
+        read_only_fields = ["id"]
         extra_kwargs = {
             "title": {"required": False},
             "context": {"required": False},
