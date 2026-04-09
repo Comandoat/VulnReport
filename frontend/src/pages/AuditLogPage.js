@@ -102,7 +102,7 @@ function AuditLogPage() {
                     <td>
                       {new Date(log.timestamp || log.created_at).toLocaleString()}
                     </td>
-                    <td style={{ fontWeight: 500 }}>{log.actor || log.user || '-'}</td>
+                    <td style={{ fontWeight: 500 }}>{log.actor?.username || log.actor || '-'}</td>
                     <td>
                       <span className={`status-badge status-${getActionColor(log.action)}`}>
                         {log.action}
