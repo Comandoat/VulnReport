@@ -2193,34 +2193,160 @@ R : Separation des responsabilites, fail-fast, parallelisation intra-stage, visi
 
 ---
 
-# SECTION 8 : CE QU'IL RESTE A FAIRE
+# SECTION 8 : ETAT FINAL DU PROJET (mis a jour le 10 avril 2026)
 
-## 8.1 La verification d'identite GitLab
+## 8.1 Verification complete du cahier des charges
 
-Si ce n'est pas deja fait, il faut verifier l'identite sur GitLab.com pour pouvoir utiliser les shared runners CI/CD. C'est un prerequis pour que le pipeline s'execute.
+Le projet a ete verifie point par point contre le CDC. Voici le statut de chaque exigence :
 
-## 8.2 Tests manuels de l'application
+### Rendus attendus
 
-Pour la soutenance, il faut avoir lance l'application et teste les workflows :
+| Rendu demande | Fichier(s) | Statut |
+|---------------|------------|--------|
+| Code GitLab (issues, branches, MR) | gitlab.com/Comandoat/VulnReport | **FAIT** — 25 issues, 16 MR merged, ~25 branches, 3 milestones fermes |
+| Dockerfile + docker-compose | `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml` | **FAIT** — 4 conteneurs, execution par `docker compose up` |
+| CI/CD avec SAST/SCA/DAST (artefacts) | `.gitlab-ci.yml` | **FAIT** — 7 stages, pipelines success sur GitLab.com |
+| README (setup, env vars, comptes seed, Docker) | `README.md` | **FAIT** — Complet avec tableau env vars, comptes seed, commandes |
+| Rapport securite (8-10 pages) | `docs/rapport-securite.md` | **FAIT** — 835 lignes, couvre architecture, OWASP, scans, corrections, risques residuels |
+
+### Perimetre fonctionnel
+
+| Exigence CDC | Statut | Detail |
+|-------------|--------|--------|
+| Auth + RBAC (Viewer/Pentester/Admin) | **FAIT** | Argon2id, sessions HttpOnly/Secure/SameSite, 3 roles, ownership verification |
+| Rapports (CRUD, findings KB/custom, tri severite) | **FAIT** | Create, edit, delete, status transitions, findings avec pre-remplissage KB |
+| KB (consultation tous roles, gestion Admin) | **FAIT** | 16 entries OWASP, CRUD admin-only, recherche/filtrage |
+| Ressources (guides, liens, cheatsheets) | **FAIT** | 6 ressources (PortSwigger, HackTheBox, TryHackMe, OWASP, CWE) |
+| Recherche & filtres (rapports, KB) | **FAIT** | SearchFilter + OrderingFilter sur rapports et KB |
+| Audit log (actions sensibles) | **FAIT** | Immutable, 114+ entries, login/CRUD/role changes traces |
+| Dashboard (compteurs) | **FAIT** | Vue admin (globale), vue pentester (ses rapports), vue viewer (publies) |
+| Export PDF | Non implemente | Optionnel selon le CDC |
+
+### Roadmap — Jalons 1 a 12
+
+| Jalon | Description | Statut |
+|-------|-------------|--------|
+| 1 | Plan de developpement | **FAIT** — `VulnReport_Atelier1.md` |
+| 3 | Architecture Technique & Risques | **FAIT** — `rapport-securite.md` + `CLAUDE.md` |
+| 4 | Mini soutenance S1 | **FAIT** — Architecture, schema BD, risques documentes |
+| 5 | Pipeline CI/CD fonctionnel | **FAIT** — 7 stages, pipelines success |
+| 6 | Schema BD & CRUD de base | **FAIT** — 4 apps, 6 modeles, 4 migrations |
+| 7 | Auth securisee + RBAC | **FAIT** — Argon2id, 3 roles, rate limiting, anti-enumeration |
+| 8 | Parcours Pentester (KB + Rapport) | **FAIT** — Pre-remplissage KB, findings custom, tri, statuts |
+| 9 | Parcours Viewer | **FAIT** — KB lecture, rapports publies uniquement |
+| 10 | Parcours Admin | **FAIT** — Users, KB CRUD, audit log, dashboard global |
+| 11 | Durcissement OWASP & corrections | **FAIT** — 79 issues corrigees, headers, validation |
+| 12 | Soutenance finale | **PRET** — Code, Docker, rapport, slides a preparer |
+
+## 8.2 Verification RBAC complete (37 tests — 10 avril 2026)
+
+Un audit RBAC complet a ete realise en testant chaque endpoint API pour chaque role. Voici les resultats :
+
+### Viewer (7 tests)
+
+| Test | Attendu | Resultat |
+|------|---------|----------|
+| Consulter KB (liste) | 200 | **200 OK** (16 entries) |
+| Consulter KB (detail) | 200 | **200 OK** (SQL Injection) |
+| Consulter rapports publies | 200 | **200 OK** (2 published) |
+| Creer un rapport | 403 | **403 Forbidden** |
+| Creer une entree KB | 403 | **403 Forbidden** |
+| Acceder a la liste des utilisateurs | 403 | **403 Forbidden** |
+| Acceder a l'audit log | 403 | **403 Forbidden** |
+
+### Pentester (13 tests)
+
+| Test | Attendu | Resultat |
+|------|---------|----------|
+| Creer un rapport | 201 + id | **201 OK** (id retourne) |
+| Editer son rapport | 200 | **200 OK** (titre modifie) |
+| Finding custom (PoC, impact, reco, refs) | 201 | **201 OK** (id retourne) |
+| Finding depuis KB (pre-remplissage auto) | 201 | **201 OK** (description pre-remplie) |
+| Transition draft -> in_progress | 200 | **200 OK** |
+| Transition in_progress -> finalized | 200 | **200 OK** |
+| Transition finalized -> published (interdit) | 400 | **400 Bad Request** |
+| Voir ses rapports + rapports publies | 200 | **200 OK** (8 rapports) |
+| Acceder au draft d'un admin | 403 | **403 Forbidden** |
+| Acceder a la liste des utilisateurs | 403 | **403 Forbidden** |
+| Acceder a l'audit log | 403 | **403 Forbidden** |
+| Creer une entree KB | 403 | **403 Forbidden** |
+| Supprimer son propre rapport | 204 | **204 No Content** |
+
+### Admin (17 tests)
+
+| Test | Attendu | Resultat |
+|------|---------|----------|
+| Liste des utilisateurs | 200 | **200 OK** (3+ users) |
+| Creer un utilisateur | 201 | **201 OK** |
+| Changer le role d'un utilisateur | 200 | **200 OK** (role=pentester) |
+| Desactiver un utilisateur | 200 | **200 OK** (is_active=False) |
+| Creer une entree KB | 201 | **201 OK** |
+| Modifier une entree KB | 200 | **200 OK** |
+| Supprimer une entree KB | 204 | **204 No Content** |
+| Voir tous les rapports | 200 | **200 OK** (9+ reports) |
+| Consulter l'audit log | 200 | **200 OK** (114+ entries) |
+| Publier un rapport | 200 | **200 OK** (status=published) |
+| Retrograder un rapport | 200 | **200 OK** (status=draft) |
+| Supprimer n'importe quel rapport | 204 | **204 No Content** |
+| Acceder au dashboard global | 200 | **200 OK** |
+| Creer un rapport | 201 | **201 OK** |
+| Editer n'importe quel rapport | 200 | **200 OK** |
+| Findings sur tout rapport | 200 | **200 OK** |
+| Recherche/filtrage rapports | 200 | **200 OK** |
+
+**Resultat : 37/37 tests RBAC passes.**
+
+## 8.3 Bugs corriges lors des tests finaux
+
+Pendant les tests manuels de l'interface web, plusieurs bugs React ont ete trouves et corriges :
+
+| Bug | Cause | Correction |
+|-----|-------|------------|
+| Dashboard admin crash (fond bleu apres 0.5s) | `log.actor` est un objet `{id, username}`, React ne peut pas rendre un objet | Remplace par `log.actor?.username` |
+| Page rapport crash (pentester) | `report.owner` est un objet, pas un int/string | `ownerId = report?.owner?.id` + `report.owner?.username` |
+| "Failed to load report" apres creation | `ReportCreateSerializer` ne retournait pas l'`id` | Ajoute `id, status, created_at` en read_only |
+| "Failed to update status" (pentester) | Dropdown permettait des transitions invalides | Composant `StatusDropdown` avec transitions valides uniquement |
+| "Failed to update status" (admin retrograde) | Backend refusait les retrogradations meme pour l'admin | Admin bypass la validation de transition |
+| Audit log page crash | `log.actor` rendu comme objet | `log.actor?.username` |
+| "FindingCreate" ne retourne pas l'id | Champ `id` absent du serializer | Ajoute `id` dans les fields |
+| `ReportUpdateSerializer` sans id | Champ `id` absent | Ajoute `id` en read_only |
+| Backend 502 apres restart | Nginx cache le DNS Docker du backend | `docker compose restart nginx` apres chaque rebuild |
+| Cookies SameSite=Strict bloque l'auth SPA | Cookies pas transmis apres redirect post-login | Change en `SameSite=Lax` |
+
+## 8.4 Etat de GitLab (10 avril 2026)
+
+| Metrique | Valeur |
+|----------|--------|
+| URL | https://gitlab.com/Comandoat/VulnReport |
+| Visibilite | Prive |
+| Issues | **25** (toutes fermees) |
+| Milestones | **3** (Sprint 1, 2, 3 — tous fermes) |
+| Labels | **10** (feature, fix, security, ops, docs, refactor, priority::*, status::done) |
+| Merge Requests | **16 merged**, 1 closed (conflit) |
+| Branches | **~25** (feature/, fix/, sec/, ops/, ci/, docs/) |
+| Contributeurs | **3** (Antoine 36 commits, Noa 15, Diego 13) |
+| Pipeline | **Success** (derniers pipelines OK) |
+| Variables CI/CD | **4** (DJANGO_SECRET_KEY, DB_PASSWORD, POSTGRES_PASSWORD, CRON_SECRET — masquees) |
+
+## 8.5 Comment lancer l'application
 
 ```bash
 # 1. Se placer dans le repertoire du projet
-cd vulnreport
+cd "C:\Users\antoi\Documents\.guardia\B2\dev solution secure"
 
-# 2. Creer le fichier .env
+# 2. Creer le fichier .env (si pas deja fait)
 cp .env.example .env
-# Modifier les mots de passe dans .env
 
-# 3. Lancer l'application
+# 3. Lancer Docker Desktop
+
+# 4. Lancer l'application
 docker compose up --build -d
 
-# 4. Tester les workflows :
-#    - Se connecter en admin, pentester, viewer
-#    - Creer un rapport
-#    - Ajouter des findings (depuis KB et custom)
-#    - Modifier le statut du rapport
-#    - Consulter l'audit log
-#    - Tester les controles d'acces (essayer d'acceder a un rapport qui n'est pas le sien)
+# 5. Si le backend a ete rebuild, redemarrer Nginx
+docker compose restart nginx
+
+# 6. Acceder a l'application
+# http://localhost
 ```
 
 **Comptes de test** :
@@ -2230,11 +2356,15 @@ docker compose up --build -d
 | Pentester | pentester1 | Pentester@VulnReport2026! |
 | Viewer | viewer1 | Viewer@VulnReport2026! |
 
-## 8.3 Export PDF des rapports
+**Commandes utiles** :
+```bash
+docker compose logs -f backend    # Voir les logs du backend
+docker compose down               # Arreter l'application
+docker compose down -v            # Arreter + supprimer la base
+docker compose exec backend python manage.py test  # Lancer les 86 tests
+```
 
-C'est une fonctionnalite optionnelle. La dependance `reportlab` est deja incluse dans requirements.txt. Si implementee, elle permettrait d'exporter un rapport au format PDF.
-
-## 8.4 La preparation de la soutenance
+## 8.6 La preparation de la soutenance
 
 Points a preparer :
 - **Presentation orale** : Preparer un plan de presentation de 15-20 minutes.
@@ -2355,9 +2485,36 @@ Voici la definition de tous les termes techniques utilises dans ce document et d
 
 ---
 
-## NOTE FINALE
+## NOTE FINALE (mise a jour 10 avril 2026)
 
-Ce document couvre l'integralite du projet VulnReport. En le lisant attentivement, vous serez en mesure de :
+Ce document couvre l'integralite du projet VulnReport. Le projet est **100% conforme au cahier des charges** :
+
+- **97 fichiers**, ~12 000 lignes de code
+- **86 tests backend** (auth, RBAC, ownership, findings, KB, audit)
+- **37 tests RBAC** manuels (tous passes)
+- **79 vulnerabilites** identifiees et corrigees lors de l'audit de securite
+- **10 bugs frontend** corriges lors des tests manuels
+- **16 Merge Requests** merged sur GitLab par 3 contributeurs
+- **Pipeline CI/CD** fonctionnel (7 stages, artefacts generes)
+- **4 conteneurs Docker** orchestres (PostgreSQL, Django, React, Nginx)
+
+### Documents produits
+
+| Document | Fichier | Contenu |
+|----------|---------|---------|
+| CLAUDE.md | `CLAUDE.md` | Specifications techniques completes |
+| README | `README.md` | Setup, env vars, comptes seed, commandes Docker |
+| Rapport securite | `docs/rapport-securite.md` | 835 lignes, architecture, OWASP, scans, corrections |
+| Guide branches | `docs/branches-guide.md` | Description detaillee de chaque branche |
+| Guide GitLab | `docs/usage-gitlab.md` | Utilisation de GitLab dans le projet |
+| Connaissance | `connaissance.md` | Ce fichier (2500+ lignes) |
+| Explication | `explication.md` | Explication technique complete |
+| Atelier 1 | `VulnReport_Atelier1.md` | Plan de dev, DAT, analyse des risques |
+| Atelier 2 | `ateliers/atelier2/README.md` | Pipeline CI/CD + SCA |
+| Atelier 3 | `ateliers/atelier3/README.md` | SAST + DAST + Secrets + Patch Management |
+| Patch Management | `ateliers/atelier3/patch-management.md` | Benchmark 6 outils, recommandation |
+
+En lisant ce document, vous serez en mesure de :
 
 1. **Expliquer le contexte** : Pourquoi le DevSecOps existe, ce qu'est un pentest, l'OWASP Top 10, le triptyque CIA.
 2. **Presenter le projet** : La vision, l'equipe, le planning, les fonctionnalites.
@@ -2365,7 +2522,9 @@ Ce document couvre l'integralite du projet VulnReport. En le lisant attentivemen
 4. **Justifier chaque mesure de securite** : Argon2id, RBAC, ORM, CSP, audit log, etc.
 5. **Expliquer le pipeline** : Chaque stage, chaque outil, pourquoi il est la.
 6. **Parler des ateliers** : Ce qui a ete fait, les outils utilises, les resultats.
-7. **Repondre aux questions techniques** : Grace au glossaire et aux explications detaillees.
+7. **Demontrer le RBAC** : 37 tests passes, matrice de permissions detaillee.
+8. **Lister les bugs corriges** : 10 bugs frontend + 79 vulnerabilites de securite.
+9. **Repondre aux questions techniques** : Grace au glossaire et aux explications detaillees.
 
 **Conseil pour la soutenance** : Ne recitez pas ce document. Comprenez les concepts et expliquez-les avec vos propres mots. Le jury cherche a evaluer votre comprehension, pas votre capacite de memorisation. Utilisez les analogies pour rendre vos explications accessibles.
 
