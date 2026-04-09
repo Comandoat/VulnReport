@@ -1,0 +1,14 @@
+.git
+.claude
+*.pdf
+*.csv
+.env
+__pycache__
+node_modules
+*.pyc
+.vscode
+.idea
+ateliers
+docs
+*.md
+!README.md
